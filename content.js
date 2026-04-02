@@ -8,7 +8,14 @@ function isPRPage() {
 }
 
 function getBaseBranch() {
-  // GitHub の base branch を取得するセレクタ（複数フォールバック）
+  // 新GitHub UI (2025+): prc-BranchName クラス — DOM順で最初がbase branch
+  const prcBranches = document.querySelectorAll('[class*="prc-BranchName-BranchName"]');
+  if (prcBranches.length > 0) {
+    const text = prcBranches[0].textContent.trim();
+    if (text) return text;
+  }
+
+  // 旧 GitHub UI セレクタ（フォールバック）
   const selectors = [
     '.commit-ref.base-ref .css-truncate-target',
     '.base-ref .css-truncate-target',
@@ -23,11 +30,12 @@ function getBaseBranch() {
     }
   }
 
-  // フォールバック: "into owner:branch from" パターンから抽出
-  const meta = document.querySelector('.gh-header-meta');
-  if (meta) {
-    const text = meta.innerText || meta.textContent;
-    const match = text.match(/into\s+(?:[^:]+:)?([^\s]+)\s+from/);
+  // フォールバック: "into owner:branch from" パターンから抽出（空白あり・なし両対応）
+  const summaryEl = document.querySelector('[class*="summaryContainer"]') ||
+                    document.querySelector('.gh-header-meta');
+  if (summaryEl) {
+    const text = summaryEl.innerText || summaryEl.textContent;
+    const match = text.match(/into\s*(?:[^:\s]+:)?(\S+)\s*from/);
     if (match) return match[1];
   }
 

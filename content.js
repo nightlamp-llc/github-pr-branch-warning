@@ -100,10 +100,9 @@ async function checkAndShowWarning() {
     return;
   }
 
-  const { allowedBranches, uiLang = 'en' } = await chrome.storage.sync.get({
-    allowedBranches: undefined,
-    uiLang: 'en',
-  });
+  const data = await chrome.storage.sync.get(['allowedBranches', 'uiLang']);
+  const allowedBranches = data.allowedBranches;
+  const uiLang = data.uiLang || 'en';
 
   // 設定がない or 空のときは警告なし
   if (!allowedBranches || allowedBranches.length === 0) {

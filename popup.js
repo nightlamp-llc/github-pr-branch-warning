@@ -19,7 +19,7 @@ function renderList(branches) {
   const list = document.getElementById('branchList');
   list.innerHTML = '';
   if (branches.length === 0) {
-    list.innerHTML = '<li style="padding:6px;color:#57606a;font-size:12px">（ブランチなし — 警告は表示されません）</li>';
+    list.innerHTML = '<li style="padding:6px;color:#57606a;font-size:12px">(No branches — warnings are disabled)</li>';
     return;
   }
   branches.forEach(branch => {
@@ -37,7 +37,7 @@ function renderList(branches) {
       const updated = allowedBranches.filter(b => b !== branch);
       await chrome.storage.sync.set({ allowedBranches: updated });
       renderList(updated);
-      showStatus(`「${branch}」を削除しました`);
+      showStatus(`Removed "${branch}"`);
     });
   });
 }
@@ -49,14 +49,14 @@ chrome.storage.sync.get({ allowedBranches: [] }, ({ allowedBranches }) => {
 document.getElementById('addBtn').addEventListener('click', async () => {
   const input = document.getElementById('newBranch');
   const branch = input.value.trim();
-  if (!branch) { showStatus('ブランチ名を入力してください', true); return; }
+  if (!branch) { showStatus('Please enter a branch name', true); return; }
   const { allowedBranches = [] } = await chrome.storage.sync.get({ allowedBranches: [] });
-  if (allowedBranches.includes(branch)) { showStatus('既に追加済みです', true); return; }
+  if (allowedBranches.includes(branch)) { showStatus('Already added', true); return; }
   const updated = [...allowedBranches, branch];
   await chrome.storage.sync.set({ allowedBranches: updated });
   renderList(updated);
   input.value = '';
-  showStatus(`「${branch}」を追加しました`);
+  showStatus(`Added "${branch}"`);
 });
 
 document.getElementById('newBranch').addEventListener('keydown', e => {

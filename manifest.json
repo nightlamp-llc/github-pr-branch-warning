@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "GitHub PR Branch Warning",
   "version": "1.0.0",
-  "description": "PRの向き先ブランチが許可リスト外の場合に警告バナーを表示します",
+  "description": "Warns you when a GitHub PR targets a branch not in your allowed list.",
   "permissions": ["storage"],
   "host_permissions": ["https://github.com/*"],
   "content_scripts": [
@@ -19,7 +19,7 @@
   },
   "action": {
     "default_popup": "popup.html",
-    "default_title": "PR Branch Warning 設定",
+    "default_title": "PR Branch Warning Settings",
     "default_icon": {
       "16": "icons/icon16.png",
       "48": "icons/icon48.png",

@@ -80,8 +80,8 @@ function showWarning(baseBranch, allowedBranches) {
     .join(' / ');
 
   banner.innerHTML =
-    `⚠️ マージ先ブランチが <code style="${codeStyle}">${escapeHtml(baseBranch)}</code> です。` +
-    `許可ブランチ（${allowedText}）ではありません。マージ先を確認してください。`;
+    `⚠️ Base branch is <code style="${codeStyle}">${escapeHtml(baseBranch)}</code> — ` +
+    `not in your allowed list (${allowedText}). Please verify the merge target.`;
 
   // main の先頭に挿入することでヘッダー後の余白を回避
   const main = document.querySelector('main, [role="main"], #js-pjax-container, .application-main');

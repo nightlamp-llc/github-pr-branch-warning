@@ -54,7 +54,7 @@ function escapeHtml(str) {
   return d.innerHTML;
 }
 
-function showWarning(baseBranch, allowedBranches) {
+function showWarning(baseBranch, allowedBranches, uiLang) {
   removeWarning();
 
   const headerHeight = getHeaderHeight();
@@ -79,9 +79,11 @@ function showWarning(baseBranch, allowedBranches) {
     .map(b => `<code style="${codeStyle}">${escapeHtml(b)}</code>`)
     .join(' / ');
 
-  banner.innerHTML =
-    `⚠️ Base branch is <code style="${codeStyle}">${escapeHtml(baseBranch)}</code> — ` +
-    `not in your allowed list (${allowedText}). Please verify the merge target.`;
+  banner.innerHTML = uiLang === 'ja'
+    ? `⚠️ マージ先ブランチが <code style="${codeStyle}">${escapeHtml(baseBranch)}</code> です。` +
+      `許可ブランチ（${allowedText}）ではありません。マージ先を確認してください。`
+    : `⚠️ Base branch is <code style="${codeStyle}">${escapeHtml(baseBranch)}</code> — ` +
+      `not in your allowed list (${allowedText}). Please verify the merge target.`;
 
   // main の先頭に挿入することでヘッダー後の余白を回避
   const main = document.querySelector('main, [role="main"], #js-pjax-container, .application-main');
@@ -98,7 +100,10 @@ async function checkAndShowWarning() {
     return;
   }
 
-  const { allowedBranches } = await chrome.storage.sync.get(['allowedBranches']);
+  const { allowedBranches, uiLang = 'en' } = await chrome.storage.sync.get({
+    allowedBranches: undefined,
+    uiLang: 'en',
+  });
 
   // 設定がない or 空のときは警告なし
   if (!allowedBranches || allowedBranches.length === 0) {
@@ -110,7 +115,7 @@ async function checkAndShowWarning() {
   if (!baseBranch) return; // DOM未準備 — リトライに任せる
 
   if (!allowedBranches.includes(baseBranch)) {
-    showWarning(baseBranch, allowedBranches);
+    showWarning(baseBranch, allowedBranches, uiLang);
   } else {
     removeWarning();
   }

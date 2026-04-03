@@ -83,6 +83,15 @@ cd github-pr-branch-warning
 > - Works with GitHub's SPA navigation
 > - No external data collection — all settings stored locally
 
+## Privacy Policy
+
+This extension does **not** collect, transmit, or share any personal data.
+
+- **Data stored:** Only your configured allowed branch list and language preference, saved locally via `chrome.storage.sync` (synced across your own Chrome profile by Google).
+- **Data accessed:** The extension reads GitHub PR page DOM to check the target branch name. This data is processed locally and never sent to any server.
+- **No tracking:** No analytics, telemetry, or usage data is collected.
+- **No third-party sharing:** No data is sold or transferred to any third party.
+
 ## License
 
 MIT

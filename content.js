@@ -6,6 +6,7 @@ const DEFAULT_BRANCHES = ['main', 'master'];
 const CONTAINER_ID = 'gh-pr-warning-container';
 const WARN_BRANCH_ID = 'gh-pr-warn-branch';
 const WARN_MERGE_ID  = 'gh-pr-warn-merge';
+const WARN_TIME_ID   = 'gh-pr-warn-time';
 
 // --- DOM helpers ---
 
@@ -210,6 +211,55 @@ async function checkMergeForgetWarning(uiLang) {
   }
 }
 
+// --- Warning 3: Outside merge time window ---
+
+function getCurrentTimeInfo(timezone) {
+  // Prefer Temporal API (Chrome 109+, fully available as of 2025)
+  if (typeof Temporal !== 'undefined') {
+    try {
+      const now = Temporal.Now.zonedDateTimeISO(timezone);
+      return { dayOfWeek: now.dayOfWeek, hour: now.hour, minute: now.minute };
+    } catch { /* fall through to Intl fallback */ }
+  }
+  // Fallback: Intl.DateTimeFormat
+  const now = new Date();
+  const dayName = now.toLocaleDateString('en-US', { timeZone: timezone, weekday: 'long' });
+  const timeStr = now.toLocaleTimeString('en-GB', {
+    timeZone: timezone, hour: '2-digit', minute: '2-digit', hour12: false,
+  });
+  const dayMap = { Monday: 1, Tuesday: 2, Wednesday: 3, Thursday: 4, Friday: 5, Saturday: 6, Sunday: 7 };
+  const [hour, minute] = timeStr.split(':').map(Number);
+  return { dayOfWeek: dayMap[dayName] ?? 1, hour, minute };
+}
+
+function isWithinTw(tw) {
+  try {
+    const { dayOfWeek, hour, minute } = getCurrentTimeInfo(tw.timezone || 'UTC');
+    if (!tw.days.includes(dayOfWeek)) return false;
+    const nowMin = hour * 60 + minute;
+    const [sh, sm] = tw.startTime.split(':').map(Number);
+    const [eh, em] = tw.endTime.split(':').map(Number);
+    return nowMin >= sh * 60 + sm && nowMin < eh * 60 + em;
+  } catch {
+    return true; // on error, don't block
+  }
+}
+
+async function checkTimeWindowWarning(uiLang) {
+  const { timeWindows = [] } = await chrome.storage.sync.get({ timeWindows: [] });
+  if (!timeWindows.length) { removeWarningItem(WARN_TIME_ID); return; }
+
+  const inWindow = timeWindows.some(tw => isWithinTw(tw));
+  if (!inWindow) {
+    const html = uiLang === 'ja'
+      ? '🕐 現在はマージ可能時間外です。設定された時間帯を確認してください。'
+      : '🕐 You are outside the allowed merge time window. Check your settings before merging.';
+    showWarningItem(WARN_TIME_ID, html, '#6e40c9');
+  } else {
+    removeWarningItem(WARN_TIME_ID);
+  }
+}
+
 // --- Main orchestrator ---
 
 async function checkAndShowWarning() {
@@ -218,6 +268,7 @@ async function checkAndShowWarning() {
   await Promise.all([
     checkBranchWarning(uiLang),
     checkMergeForgetWarning(uiLang),
+    checkTimeWindowWarning(uiLang),
   ]);
 }
 

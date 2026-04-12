@@ -82,6 +82,61 @@
     .add-btn:hover { background: #1a7f37; }
     .status { font-size: 12px; color: #57606a; min-height: 18px; text-align: center; margin-top: 4px; }
     .status.error { color: #cf222e; }
+
+    /* Time window list items */
+    .tw-item {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 6px 8px; background: #f6f8fa; border: 1px solid #d0d7de;
+      border-radius: 6px; margin-bottom: 4px; gap: 6px;
+    }
+    .tw-info { display: flex; align-items: center; gap: 6px; flex: 1; min-width: 0; }
+    .tw-days-display {
+      font-family: monospace; font-size: 11px; font-weight: 700;
+      color: #0969da; white-space: nowrap;
+    }
+    .tw-time-display { font-family: monospace; font-size: 12px; white-space: nowrap; }
+    .tw-tz-display {
+      font-size: 11px; color: #57606a;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    }
+
+    /* Time window add form */
+    .tw-form {
+      border: 1px solid #d0d7de; border-radius: 6px;
+      padding: 8px; background: #f6f8fa; margin-bottom: 8px;
+    }
+    .tw-form-row {
+      display: flex; align-items: center; gap: 6px; margin-bottom: 6px;
+    }
+    .tw-form-row:last-child { margin-bottom: 0; }
+    .tw-form-row label {
+      font-size: 11px; color: #57606a; white-space: nowrap; min-width: 32px;
+    }
+    .day-btn {
+      padding: 3px 5px; border: 1px solid #d0d7de; border-radius: 4px;
+      background: #fff; cursor: pointer; font-size: 11px; font-weight: 600;
+      color: #57606a; min-width: 26px;
+    }
+    .day-btn:hover { background: #eaeef2; }
+    .day-btn.active { background: #0969da; color: #fff; border-color: #0969da; }
+    .days-row { display: flex; gap: 3px; }
+    input[type="time"] {
+      width: 88px; padding: 4px 6px; border: 1px solid #d0d7de;
+      border-radius: 4px; font-size: 12px; outline: none;
+    }
+    input[type="time"]:focus { border-color: #0969da; }
+    .tw-sep { font-size: 12px; color: #57606a; }
+    .tz-input {
+      flex: 1; padding: 4px 6px; border: 1px solid #d0d7de;
+      border-radius: 4px; font-size: 12px; outline: none;
+    }
+    .tz-input:focus { border-color: #0969da; }
+    .add-tw-btn {
+      padding: 5px 10px; background: #1f883d; color: #fff;
+      border: none; border-radius: 6px; cursor: pointer; font-size: 12px;
+      font-weight: 500; white-space: nowrap;
+    }
+    .add-tw-btn:hover { background: #1a7f37; }
   </style>
 </head>
 <body>
@@ -93,6 +148,7 @@
   <div class="tabs">
     <button class="tab active" data-tab="branch">Branch</button>
     <button class="tab" data-tab="merge">Merge</button>
+    <button class="tab" data-tab="time">Time</button>
   </div>
 
   <!-- Tab 1: Allowed base branches (existing feature) -->
@@ -113,6 +169,38 @@
     <div class="add-form">
       <input type="text" id="newMergeCheck" placeholder="Branch name (e.g. staging)" autocomplete="off" />
       <button class="add-btn" id="addMergeCheckBtn">Add</button>
+    </div>
+  </div>
+
+  <!-- Tab 3: Time windows (new) -->
+  <div class="tab-content" id="panel-time">
+    <p class="section-label" id="timeWindowLabel">Allowed merge time windows</p>
+    <ul id="timeWindowList"></ul>
+    <div class="tw-form">
+      <div class="tw-form-row">
+        <label id="twDaysLabel">Days</label>
+        <div class="days-row" id="twDaysRow">
+          <button class="day-btn" data-day="1">Mon</button>
+          <button class="day-btn" data-day="2">Tue</button>
+          <button class="day-btn" data-day="3">Wed</button>
+          <button class="day-btn" data-day="4">Thu</button>
+          <button class="day-btn" data-day="5">Fri</button>
+          <button class="day-btn" data-day="6">Sat</button>
+          <button class="day-btn" data-day="7">Sun</button>
+        </div>
+      </div>
+      <div class="tw-form-row">
+        <label id="twFromLabel">From</label>
+        <input type="time" id="twStart" value="10:00" />
+        <span class="tw-sep">—</span>
+        <label id="twToLabel">To</label>
+        <input type="time" id="twEnd" value="18:00" />
+      </div>
+      <div class="tw-form-row">
+        <label id="twTzLabel">TZ</label>
+        <input type="text" class="tz-input" id="twTz" placeholder="Asia/Tokyo" autocomplete="off" />
+        <button class="add-tw-btn" id="addTwBtn">Add Window</button>
+      </div>
     </div>
   </div>
 

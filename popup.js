@@ -15,6 +15,7 @@ const STRINGS = {
     // --- Tabs ---
     tabBranch: 'Branch',
     tabMerge: 'Merge',
+    tabTime: 'Time',
     // --- Tab 2: Merge check ---
     mergeCheckLabel: 'Merge-into check branches',
     mergeCheckDesc: "Warn if the PR's head branch has not been merged into these branches yet.",
@@ -26,6 +27,22 @@ const STRINGS = {
     mergeCheckRemoved: b => `Removed "${b}"`,
     mergeCheckAlreadyAdded: 'Already added',
     mergeCheckEnterBranch: 'Please enter a branch name',
+    // --- Tab 3: Time windows ---
+    timeWindowLabel: 'Allowed merge time windows',
+    timeWindowEmpty: '(No windows — time warnings disabled)',
+    twDaysLabel: 'Days',
+    twFromLabel: 'From',
+    twToLabel: 'To',
+    twTzLabel: 'TZ',
+    twTzPlaceholder: 'Asia/Tokyo',
+    addWindowBtn: 'Add Window',
+    twRemoveTitle: 'Remove window',
+    twAdded: 'Time window added',
+    twRemoved: 'Time window removed',
+    twInvalidDays: 'Please select at least one day',
+    twInvalidTime: 'End time must be after start time',
+    twInvalidTz: 'Invalid timezone',
+    dayNames: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
   },
   ja: {
     // --- Tab 1: Branch ---
@@ -41,6 +58,7 @@ const STRINGS = {
     // --- Tabs ---
     tabBranch: 'ブランチ',
     tabMerge: 'マージ確認',
+    tabTime: '時間帯',
     // --- Tab 2: Merge check ---
     mergeCheckLabel: 'マージ済みチェックブランチ',
     mergeCheckDesc: 'PRの作業ブランチがこれらのブランチにまだマージされていない場合に警告します。',
@@ -52,6 +70,22 @@ const STRINGS = {
     mergeCheckRemoved: b => `「${b}」を削除しました`,
     mergeCheckAlreadyAdded: '既に追加済みです',
     mergeCheckEnterBranch: 'ブランチ名を入力してください',
+    // --- Tab 3: Time windows ---
+    timeWindowLabel: 'マージ可能時間帯',
+    timeWindowEmpty: '（時間帯なし — 時間帯警告は無効）',
+    twDaysLabel: '曜日',
+    twFromLabel: '開始',
+    twToLabel: '終了',
+    twTzLabel: 'TZ',
+    twTzPlaceholder: 'Asia/Tokyo',
+    addWindowBtn: '追加',
+    twRemoveTitle: '削除',
+    twAdded: '時間帯を追加しました',
+    twRemoved: '時間帯を削除しました',
+    twInvalidDays: '曜日を1つ以上選択してください',
+    twInvalidTime: '終了時間は開始時間より後にしてください',
+    twInvalidTz: '無効なタイムゾーンです',
+    dayNames: ['月', '火', '水', '木', '金', '土', '日'],
   },
 };
 
@@ -68,6 +102,11 @@ function showStatus(msg, isError = false) {
   el.textContent = msg;
   el.className = 'status' + (isError ? ' error' : '');
   setTimeout(() => { el.textContent = ''; el.className = 'status'; }, 2000);
+}
+
+function isValidTimezone(tz) {
+  try { Intl.DateTimeFormat(undefined, { timeZone: tz }); return true; }
+  catch { return false; }
 }
 
 // --- Tab switching ---
@@ -98,6 +137,18 @@ function applyLang() {
   document.getElementById('mergeCheckDesc').textContent = s.mergeCheckDesc;
   document.getElementById('newMergeCheck').placeholder = s.mergeCheckPlaceholder;
   document.getElementById('addMergeCheckBtn').textContent = s.mergeCheckAddBtn;
+  // Tab 3
+  document.getElementById('timeWindowLabel').textContent = s.timeWindowLabel;
+  document.getElementById('twDaysLabel').textContent = s.twDaysLabel;
+  document.getElementById('twFromLabel').textContent = s.twFromLabel;
+  document.getElementById('twToLabel').textContent = s.twToLabel;
+  document.getElementById('twTzLabel').textContent = s.twTzLabel;
+  document.getElementById('twTz').placeholder = s.twTzPlaceholder;
+  document.getElementById('addTwBtn').textContent = s.addWindowBtn;
+  // Day buttons
+  document.querySelectorAll('.day-btn').forEach((btn, i) => {
+    btn.textContent = s.dayNames[i];
+  });
   // Lang toggle
   document.getElementById('langToggle').innerHTML = currentLang === 'en'
     ? '<strong>EN</strong>&nbsp;/&nbsp;JA'
@@ -198,16 +249,84 @@ document.getElementById('newMergeCheck').addEventListener('keydown', e => {
   if (e.key === 'Enter') document.getElementById('addMergeCheckBtn').click();
 });
 
+// --- Tab 3: Time windows ---
+
+function renderTimeWindowList(timeWindows) {
+  const s = STRINGS[currentLang];
+  const list = document.getElementById('timeWindowList');
+  list.innerHTML = '';
+  if (timeWindows.length === 0) {
+    list.innerHTML = `<li style="padding:6px;color:#57606a;font-size:12px">${s.timeWindowEmpty}</li>`;
+    return;
+  }
+  timeWindows.forEach(tw => {
+    const li = document.createElement('li');
+    li.className = 'tw-item';
+    const daysText = tw.days.map(d => s.dayNames[d - 1]).join(' ');
+    li.innerHTML = `
+      <div class="tw-info">
+        <span class="tw-days-display">${escapeHtml(daysText)}</span>
+        <span class="tw-time-display">${escapeHtml(tw.startTime)}–${escapeHtml(tw.endTime)}</span>
+        <span class="tw-tz-display">${escapeHtml(tw.timezone)}</span>
+      </div>
+      <button class="remove-btn" data-id="${tw.id}" title="${s.twRemoveTitle}">×</button>
+    `;
+    list.appendChild(li);
+  });
+  list.querySelectorAll('.remove-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = Number(btn.dataset.id);
+      const { timeWindows: tws = [] } = await chrome.storage.sync.get({ timeWindows: [] });
+      const updated = tws.filter(tw => tw.id !== id);
+      await chrome.storage.sync.set({ timeWindows: updated });
+      renderTimeWindowList(updated);
+      showStatus(STRINGS[currentLang].twRemoved);
+    });
+  });
+}
+
+// Day toggle buttons
+document.querySelectorAll('.day-btn').forEach(btn => {
+  btn.addEventListener('click', () => btn.classList.toggle('active'));
+});
+
+document.getElementById('addTwBtn').addEventListener('click', async () => {
+  const s = STRINGS[currentLang];
+  const selectedDays = Array.from(document.querySelectorAll('.day-btn.active'))
+    .map(btn => Number(btn.dataset.day));
+  if (selectedDays.length === 0) { showStatus(s.twInvalidDays, true); return; }
+
+  const startTime = document.getElementById('twStart').value;
+  const endTime   = document.getElementById('twEnd').value;
+  if (!startTime || !endTime || startTime >= endTime) { showStatus(s.twInvalidTime, true); return; }
+
+  const timezone = document.getElementById('twTz').value.trim() || 'UTC';
+  if (!isValidTimezone(timezone)) { showStatus(s.twInvalidTz, true); return; }
+
+  const { timeWindows: tws = [] } = await chrome.storage.sync.get({ timeWindows: [] });
+  const newTw = { id: Date.now(), days: selectedDays.sort((a, b) => a - b), startTime, endTime, timezone };
+  await chrome.storage.sync.set({ timeWindows: [...tws, newTw] });
+  renderTimeWindowList([...tws, newTw]);
+
+  // Reset form
+  document.querySelectorAll('.day-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('twStart').value = '10:00';
+  document.getElementById('twEnd').value   = '18:00';
+  document.getElementById('twTz').value    = '';
+  showStatus(s.twAdded);
+});
+
 // --- Language toggle ---
 
 document.getElementById('langToggle').addEventListener('click', async () => {
   currentLang = currentLang === 'en' ? 'ja' : 'en';
   await chrome.storage.sync.set({ uiLang: currentLang });
   applyLang();
-  const { allowedBranches = [], mergeCheckBranches = [] } =
-    await chrome.storage.sync.get({ allowedBranches: [], mergeCheckBranches: [] });
+  const { allowedBranches = [], mergeCheckBranches = [], timeWindows = [] } =
+    await chrome.storage.sync.get({ allowedBranches: [], mergeCheckBranches: [], timeWindows: [] });
   renderBranchList(allowedBranches);
   renderMergeCheckList(mergeCheckBranches);
+  renderTimeWindowList(timeWindows);
 });
 
 // --- Init ---
@@ -217,15 +336,18 @@ async function init() {
     allowedBranches = [],
     uiLang = 'en',
     mergeCheckBranches = [],
+    timeWindows = [],
   } = await chrome.storage.sync.get({
     allowedBranches: [],
     uiLang: 'en',
     mergeCheckBranches: [],
+    timeWindows: [],
   });
   currentLang = uiLang;
   applyLang();
   renderBranchList(allowedBranches);
   renderMergeCheckList(mergeCheckBranches);
+  renderTimeWindowList(timeWindows);
 }
 
 init();

@@ -1,13 +1,15 @@
 {
   "manifest_version": 3,
   "name": "GitHub PR Branch Warning",
-  "version": "1.1.0",
-  "description": "Warns you when a GitHub PR targets a branch not in your allowed list.",
+  "version": "1.1.1",
+  "description": "Warns when a PR targets an unexpected branch or when a head branch hasn't been merged into required branches.",
   "background": {
     "service_worker": "background.js"
   },
   "permissions": ["storage"],
-  "host_permissions": ["https://github.com/*"],
+  "host_permissions": [
+    "https://github.com/*"
+  ],
   "content_scripts": [
     {
       "matches": ["https://github.com/*/*/pull/*"],

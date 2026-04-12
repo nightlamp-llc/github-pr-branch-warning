@@ -198,12 +198,13 @@
       </div>
       <div class="tw-form-row">
         <label id="twTzLabel">TZ</label>
-        <input type="text" class="tz-input" id="twTz" placeholder="Asia/Tokyo" autocomplete="off" />
+        <input list="tz-list" class="tz-input" id="twTz" placeholder="Asia/Tokyo" />
         <button class="add-tw-btn" id="addTwBtn">Add Window</button>
       </div>
     </div>
   </div>
 
+  <datalist id="tz-list"></datalist>
   <div class="status" id="status"></div>
   <script src="popup.js"></script>
 </body>

@@ -332,6 +332,16 @@ document.getElementById('langToggle').addEventListener('click', async () => {
 // --- Init ---
 
 async function init() {
+  // Populate timezone datalist
+  if (typeof Intl.supportedValuesOf === 'function') {
+    const tzList = document.getElementById('tz-list');
+    Intl.supportedValuesOf('timeZone').forEach(tz => {
+      const opt = document.createElement('option');
+      opt.value = tz;
+      tzList.appendChild(opt);
+    });
+  }
+
   const {
     allowedBranches = [],
     uiLang = 'en',

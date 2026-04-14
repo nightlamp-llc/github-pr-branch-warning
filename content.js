@@ -165,16 +165,64 @@ async function checkBranchWarning(uiLang) {
 
 // --- Warning 2: Merge forget check ---
 
+// Detect PR state from the GitHub PR page DOM.
+// Returns 'merged' | 'closed' | 'open' | null (unknown / DOM not ready).
+function getPRState() {
+  // New GitHub UI (Primer React components)
+  const prcEl = document.querySelector('[class*="prc-StateLabel-stateLabel"]');
+  if (prcEl) {
+    const t = prcEl.textContent.trim().toLowerCase();
+    if (t === 'merged') return 'merged';
+    if (t === 'closed') return 'closed';
+    if (t === 'open') return 'open';
+  }
+  // Fallback: legacy GitHub UI
+  const legacyEl = document.querySelector('.gh-header-state');
+  if (legacyEl) {
+    const t = legacyEl.textContent.trim().toLowerCase();
+    if (t === 'merged') return 'merged';
+    if (t === 'closed') return 'closed';
+    if (t === 'open') return 'open';
+  }
+  return null;
+}
+
 // Uses HTML fetch with browser cookies — works for both public and private repos
 // (user must be logged in to GitHub). No token required.
+//
+// Returns true  — headBranch is merged into requiredBranch
+//         false — not merged
+//         null  — check could not be completed (network error / auth)
 async function isMergedInto(owner, repo, headBranch, requiredBranch) {
-  const url = `https://github.com/${owner}/${repo}/compare/${encodeURIComponent(requiredBranch)}...${encodeURIComponent(headBranch)}`;
+  const compareUrl = `https://github.com/${owner}/${repo}/compare/${encodeURIComponent(requiredBranch)}...${encodeURIComponent(headBranch)}`;
+  try {
+    const resp = await fetch(compareUrl, { credentials: 'include' });
+    if (!resp.ok) return null;
+    const html = await resp.text();
+    // Standard merge: all commits from headBranch are reachable from requiredBranch
+    if (/There isn't anything to compare|is up to date with all commits from/i.test(html)) {
+      return true;
+    }
+    // Squash / rebase merge: commits have different SHAs so git history diverges,
+    // but the work was merged via a PR. Fall back to checking closed merged PRs.
+    return await hasMergedPR(owner, repo, headBranch, requiredBranch);
+  } catch {
+    return null;
+  }
+}
+
+// Fallback for squash/rebase merges: search for a merged PR from headBranch into requiredBranch.
+async function hasMergedPR(owner, repo, headBranch, requiredBranch) {
+  const q = encodeURIComponent(`is:pr is:merged head:${headBranch} base:${requiredBranch}`);
+  const url = `https://github.com/${owner}/${repo}/pulls?q=${q}`;
   try {
     const resp = await fetch(url, { credentials: 'include' });
     if (!resp.ok) return null;
     const html = await resp.text();
-    // "nothing to compare" or "up to date" text indicates fully merged
-    return /There isn't anything to compare|is up to date with all commits from/i.test(html);
+    // GitHub renders this text when the search returns no results
+    if (/We couldn['\u2019]t find any pull requests matching/i.test(html)) return false;
+    // If there is at least one PR row in the list, the branch was merged via PR
+    return /js-issue-row|data-id="\d+"/i.test(html);
   } catch {
     return null;
   }
@@ -264,6 +312,12 @@ async function checkTimeWindowWarning(uiLang) {
 
 async function checkAndShowWarning() {
   if (!isPRPage()) { removeAllWarnings(); return; }
+  // Suppress all warnings when the PR is already merged or closed
+  const prState = getPRState();
+  if (prState === 'merged' || prState === 'closed') {
+    removeAllWarnings();
+    return;
+  }
   const { uiLang = 'en' } = await chrome.storage.sync.get({ uiLang: 'en' });
   await Promise.all([
     checkBranchWarning(uiLang),
